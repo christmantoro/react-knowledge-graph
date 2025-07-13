@@ -41,7 +41,7 @@ const SEOKnowledgeGraph: React.FC<SEOKnowledgeGraphProps> = ({
       if (data.inside.length === 0 && data.outside.length === 0) {
         message.info(`No additional data found for ${node.name}`);
       } else {
-        message.success(`Loaded ${data.inside.length + data.outside.length} related entities`);
+        message.success(`Loaded ${data.inside.length + data.outside.length} related entities from MotherDuck`);
       }
       
       return {
@@ -51,8 +51,8 @@ const SEOKnowledgeGraph: React.FC<SEOKnowledgeGraphProps> = ({
       };
     } catch (error) {
       console.error('Error exploring SEO data:', error);
-      message.error('Failed to load related entities');
-      return { inside: [], outside: [], edges: [] };
+      message.error(`Failed to load data from MotherDuck: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw error; // Re-throw to prevent fallback behavior
     } finally {
       setLoading(false);
     }

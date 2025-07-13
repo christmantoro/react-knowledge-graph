@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { NextPage } from 'next';
-import { Layout, Card, Row, Col, Select, Button, message, Spin, Statistic } from 'antd';
+import { Layout, Card, Row, Col, Select, Button, message, Spin, Statistic, Alert } from 'antd';
 import { SearchOutlined, PlusOutlined, DatabaseOutlined, LinkOutlined, FileTextOutlined, TrophyOutlined } from '@ant-design/icons';
 import SEOKnowledgeGraph from '../components/SEOKnowledgeGraph';
 import { SEOEntity } from '../types/seo';
@@ -13,6 +13,7 @@ const SEOClustersPage: NextPage = () => {
   const [clusters, setClusters] = useState<SEOEntity[]>([]);
   const [selectedCluster, setSelectedCluster] = useState<SEOEntity | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [clusterStats, setClusterStats] = useState<any>(null);
   const [seoDataService] = useState(new SEODataService());
 
@@ -29,6 +30,7 @@ const SEOClustersPage: NextPage = () => {
   const loadTopicClusters = async () => {
     try {
       setLoading(true);
+      setError(null);
       
       const clusterData = await seoDataService.getAllTopicClusters();
       
@@ -37,50 +39,11 @@ const SEOClustersPage: NextPage = () => {
         setSelectedCluster(clusterData[0]);
         message.success(`Loaded ${clusterData.length} topic clusters from MotherDuck`);
       } else {
-        message.warning('No topic clusters found in MotherDuck database');
-        // Fallback sample data
-        const sampleCluster: SEOEntity = {
-          id: 'cluster-1',
-          name: 'Content Marketing Strategy',
-          type: 'topic_cluster',
-          searchVolume: 12000,
-          difficulty: 45,
-          intent: 'informational',
-          hasMore: true,
-          direction: 'root',
-          metadata: {
-            searchVolume: 12000,
-            difficulty: 45,
-            traffic_potential: 8500
-          }
-        };
-        
-        setClusters([sampleCluster]);
-        setSelectedCluster(sampleCluster);
+        setError('No topic clusters found in MotherDuck database. Please ensure your database contains SEO data.');
       }
     } catch (error) {
       console.error('Error loading topic clusters:', error);
-      message.error('Failed to connect to MotherDuck. Please check your configuration.');
-      
-      // Fallback sample data
-      const sampleCluster: SEOEntity = {
-        id: 'cluster-1',
-        name: 'Content Marketing Strategy (Sample)',
-        type: 'topic_cluster',
-        searchVolume: 12000,
-        difficulty: 45,
-        intent: 'informational',
-        hasMore: true,
-        direction: 'root',
-        metadata: {
-          searchVolume: 12000,
-          difficulty: 45,
-          traffic_potential: 8500
-        }
-      };
-      
-      setClusters([sampleCluster]);
-      setSelectedCluster(sampleCluster);
+      setError(`Failed to connect to MotherDuck: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
@@ -92,6 +55,7 @@ const SEOClustersPage: NextPage = () => {
       setClusterStats(stats);
     } catch (error) {
       console.error('Error loading cluster stats:', error);
+      message.error('Failed to load cluster statistics');
     }
   };
 
@@ -112,7 +76,7 @@ const SEOClustersPage: NextPage = () => {
       await loadTopicClusters();
       message.success('Successfully connected to MotherDuck!');
     } catch (error) {
-      message.error('Failed to connect to MotherDuck. Please check your token.');
+      message.error('Failed to connect to MotherDuck. Please check your token and database.');
     } finally {
       setLoading(false);
     }
@@ -124,6 +88,34 @@ const SEOClustersPage: NextPage = () => {
         <Content style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column' }}>
           <Spin size="large" />
           <p style={{ marginTop: 16 }}>Connecting to MotherDuck...</p>
+        </Content>
+      </Layout>
+    );
+  }
+
+  if (error) {
+    return (
+      <Layout style={{ minHeight: '100vh' }}>
+        <Content style={{ padding: '24px' }}>
+          <Alert
+            message="MotherDuck Connection Error"
+            description={error}
+            type="error"
+            showIcon
+            style={{ marginBottom: 24 }}
+            action={
+              <Button size="small" onClick={testConnection}>
+                Retry Connection
+              </Button>
+            }
+          />
+          <Card style={{ textAlign: 'center' }}>
+            <h3>Unable to load SEO data</h3>
+            <p>Please check your MotherDuck configuration and ensure your database contains the required SEO schema.</p>
+            <Button type="primary" onClick={testConnection} loading={loading}>
+              Test MotherDuck Connection
+            </Button>
+          </Card>
         </Content>
       </Layout>
     );
@@ -246,20 +238,12 @@ const SEOClustersPage: NextPage = () => {
           </Row>
         )}
 
-        {selectedCluster ? (
+        {selectedCluster && (
           <SEOKnowledgeGraph 
             initialCluster={selectedCluster}
             width="100%"
             height="calc(100vh - 200px)"
           />
-        ) : (
-          <Card style={{ textAlign: 'center', marginTop: '100px' }}>
-            <h3>No topic clusters available</h3>
-            <p>Connect to your MotherDuck database to load SEO data</p>
-            <Button type="primary" onClick={testConnection} loading={loading}>
-              Test MotherDuck Connection
-            </Button>
-          </Card>
         )}
       </Content>
     </Layout>
