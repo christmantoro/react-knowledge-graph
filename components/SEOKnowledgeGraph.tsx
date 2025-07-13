@@ -1,15 +1,16 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { KnowledgeGraph, NodeProps } from '../KnowledgeGraph';
 import { SEODataService } from '../services/seoDataService';
 import { SEOEntity } from '../types/seo';
-import { Card, Statistic, Row, Col, Tag, Button, Modal, Descriptions } from 'antd';
+import { Card, Statistic, Row, Col, Tag, Button, Modal, Descriptions, message } from 'antd';
 import { 
   SearchOutlined, 
   TrophyOutlined, 
   LinkOutlined, 
   FileTextOutlined,
   UserOutlined,
-  BulbOutlined 
+  BulbOutlined,
+  ExclamationCircleOutlined 
 } from '@ant-design/icons';
 
 interface SEOKnowledgeGraphProps {
@@ -26,10 +27,23 @@ const SEOKnowledgeGraph: React.FC<SEOKnowledgeGraphProps> = ({
   const [seoDataService] = useState(new SEODataService());
   const [selectedEntity, setSelectedEntity] = useState<SEOEntity | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const explore = useCallback(async (id: string, node: NodeProps) => {
     try {
+      setLoading(true);
+      console.log('Exploring node:', id, node);
+      
       const data = await seoDataService.getTopicCluster(id);
+      
+      console.log('Fetched data:', data);
+      
+      if (data.inside.length === 0 && data.outside.length === 0) {
+        message.info(`No additional data found for ${node.name}`);
+      } else {
+        message.success(`Loaded ${data.inside.length + data.outside.length} related entities`);
+      }
+      
       return {
         inside: data.inside,
         outside: data.outside,
@@ -37,18 +51,22 @@ const SEOKnowledgeGraph: React.FC<SEOKnowledgeGraphProps> = ({
       };
     } catch (error) {
       console.error('Error exploring SEO data:', error);
+      message.error('Failed to load related entities');
       return { inside: [], outside: [], edges: [] };
+    } finally {
+      setLoading(false);
     }
   }, [seoDataService]);
 
   const handleNodeInfo = useCallback((node: any) => {
+    console.log('Node info clicked:', node);
     setSelectedEntity(node as SEOEntity);
     setModalVisible(true);
   }, []);
 
   const handleNodeAddon = useCallback(async (node: any) => {
-    // Handle adding node to SEO strategy, content calendar, etc.
     console.log('Adding to SEO strategy:', node);
+    message.success(`Added "${node.name}" to SEO strategy`);
   }, []);
 
   const getNodeIcon = (type: string) => {
@@ -82,47 +100,21 @@ const SEOKnowledgeGraph: React.FC<SEOKnowledgeGraphProps> = ({
   };
 
   return (
-    <div style={{ width: '100%', height: '100vh' }}>
-      <Row gutter={16} style={{ marginBottom: 16, padding: '0 16px' }}>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="Topic Cluster"
-              value={initialCluster.name}
-              prefix={<SearchOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="Search Volume"
-              value={initialCluster.searchVolume || 0}
-              suffix="monthly"
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="Keyword Difficulty"
-              value={initialCluster.difficulty || 0}
-              suffix="/100"
-              valueStyle={{ color: getDifficultyColor(initialCluster.difficulty) }}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="Search Intent"
-              value={initialCluster.intent || 'Mixed'}
-              prefix={<BulbOutlined />}
-              valueStyle={{ color: getIntentColor(initialCluster.intent) }}
-            />
-          </Card>
-        </Col>
-      </Row>
+    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+      {loading && (
+        <div style={{
+          position: 'absolute',
+          top: 16,
+          right: 16,
+          zIndex: 1000,
+          background: 'rgba(0,0,0,0.8)',
+          color: 'white',
+          padding: '8px 16px',
+          borderRadius: '4px'
+        }}>
+          Loading data from MotherDuck...
+        </div>
+      )}
 
       <KnowledgeGraph
         explore={explore}
@@ -278,6 +270,11 @@ const SEOKnowledgeGraph: React.FC<SEOKnowledgeGraphProps> = ({
             {selectedEntity.metadata?.traffic_potential && (
               <Descriptions.Item label="Traffic Potential" span={2}>
                 {selectedEntity.metadata.traffic_potential.toLocaleString()} monthly visits
+              </Descriptions.Item>
+            )}
+            {selectedEntity.metadata?.shared_keywords && (
+              <Descriptions.Item label="Shared Keywords" span={2}>
+                {selectedEntity.metadata.shared_keywords} keywords in common
               </Descriptions.Item>
             )}
           </Descriptions>
