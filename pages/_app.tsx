@@ -1,13 +1,13 @@
 import "../styles/globals.css";
 import type { AppProps } from "next/app";
 import "../KnowledgeGraph/index.css";
-import { ConfigProvider } from "antd";
+import { ToastProvider } from "../components/ui/toast";
 
 function MyApp({ Component, pageProps }: AppProps) {
   return (
-    <ConfigProvider>
+    <ToastProvider>
       <Component {...pageProps} />
-    </ConfigProvider>
+    </ToastProvider>
   );
 }
 

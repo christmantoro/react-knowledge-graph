@@ -1,17 +1,22 @@
-import React, { useCallback, useState, useEffect } from 'react';
+import React, { useCallback, useState } from 'react';
 import { KnowledgeGraph, NodeProps } from '../KnowledgeGraph';
 import { SEODataService } from '../services/seoDataService';
 import { SEOEntity } from '../types/seo';
-import { Card, Statistic, Row, Col, Tag, Button, Modal, Descriptions, message } from 'antd';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Button } from './ui/button';
+import { Badge } from './ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
+import { useToast } from './ui/toast';
 import { 
-  SearchOutlined, 
-  TrophyOutlined, 
-  LinkOutlined, 
-  FileTextOutlined,
-  UserOutlined,
-  BulbOutlined,
-  ExclamationCircleOutlined 
-} from '@ant-design/icons';
+  Search, 
+  Trophy, 
+  Link, 
+  FileText,
+  User,
+  Lightbulb,
+  AlertTriangle,
+  ExternalLink
+} from 'lucide-react';
 
 interface SEOKnowledgeGraphProps {
   initialCluster: SEOEntity;
@@ -28,6 +33,7 @@ const SEOKnowledgeGraph: React.FC<SEOKnowledgeGraphProps> = ({
   const [selectedEntity, setSelectedEntity] = useState<SEOEntity | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [loading, setLoading] = useState(false);
+  const { showToast } = useToast();
 
   const explore = useCallback(async (id: string, node: NodeProps) => {
     try {
@@ -39,9 +45,17 @@ const SEOKnowledgeGraph: React.FC<SEOKnowledgeGraphProps> = ({
       console.log('Fetched data:', data);
       
       if (data.inside.length === 0 && data.outside.length === 0) {
-        message.info(`No additional data found for ${node.name}`);
+        showToast({
+          title: "No Data",
+          description: `No additional data found for ${node.name}`,
+          variant: "default"
+        });
       } else {
-        message.success(`Loaded ${data.inside.length + data.outside.length} related entities from MotherDuck`);
+        showToast({
+          title: "Data Loaded",
+          description: `Loaded ${data.inside.length + data.outside.length} related entities from MotherDuck`,
+          variant: "success"
+        });
       }
       
       return {
@@ -51,12 +65,16 @@ const SEOKnowledgeGraph: React.FC<SEOKnowledgeGraphProps> = ({
       };
     } catch (error) {
       console.error('Error exploring SEO data:', error);
-      message.error(`Failed to load data from MotherDuck: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      throw error; // Re-throw to prevent fallback behavior
+      showToast({
+        title: "Error",
+        description: `Failed to load data from MotherDuck: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: "destructive"
+      });
+      throw error;
     } finally {
       setLoading(false);
     }
-  }, [seoDataService]);
+  }, [seoDataService, showToast]);
 
   const handleNodeInfo = useCallback((node: any) => {
     console.log('Node info clicked:', node);
@@ -66,8 +84,12 @@ const SEOKnowledgeGraph: React.FC<SEOKnowledgeGraphProps> = ({
 
   const handleNodeAddon = useCallback(async (node: any) => {
     console.log('Adding to SEO strategy:', node);
-    message.success(`Added "${node.name}" to SEO strategy`);
-  }, []);
+    showToast({
+      title: "Added to Strategy",
+      description: `Added "${node.name}" to SEO strategy`,
+      variant: "success"
+    });
+  }, [showToast]);
 
   const getNodeIcon = (type: string) => {
     switch (type) {
@@ -84,34 +106,25 @@ const SEOKnowledgeGraph: React.FC<SEOKnowledgeGraphProps> = ({
 
   const getIntentColor = (intent?: string) => {
     switch (intent) {
-      case 'informational': return '#1890ff';
-      case 'navigational': return '#52c41a';
-      case 'transactional': return '#f5222d';
-      case 'commercial': return '#fa8c16';
-      default: return '#d9d9d9';
+      case 'informational': return 'bg-blue-500';
+      case 'navigational': return 'bg-green-500';
+      case 'transactional': return 'bg-red-500';
+      case 'commercial': return 'bg-orange-500';
+      default: return 'bg-gray-500';
     }
   };
 
   const getDifficultyColor = (difficulty?: number) => {
-    if (!difficulty) return '#d9d9d9';
-    if (difficulty < 30) return '#52c41a';
-    if (difficulty < 60) return '#fa8c16';
-    return '#f5222d';
+    if (!difficulty) return 'text-gray-500';
+    if (difficulty < 30) return 'text-green-500';
+    if (difficulty < 60) return 'text-orange-500';
+    return 'text-red-500';
   };
 
   return (
-    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+    <div className="w-full h-full relative">
       {loading && (
-        <div style={{
-          position: 'absolute',
-          top: 16,
-          right: 16,
-          zIndex: 1000,
-          background: 'rgba(0,0,0,0.8)',
-          color: 'white',
-          padding: '8px 16px',
-          borderRadius: '4px'
-        }}>
+        <div className="absolute top-4 right-4 z-50 bg-black/80 text-white px-4 py-2 rounded-md text-sm">
           Loading data from MotherDuck...
         </div>
       )}
@@ -130,156 +143,196 @@ const SEOKnowledgeGraph: React.FC<SEOKnowledgeGraphProps> = ({
         showFilter={true}
         enableAutoExplore={true}
         style={{ 
-          background: '#f5f5f5',
-          border: '1px solid #d9d9d9',
+          background: '#f8fafc',
+          border: '1px solid #e2e8f0',
           borderRadius: '8px'
         }}
         edgeConfig={{
-          stroke: '#d9d9d9',
+          stroke: '#d1d5db',
           strokeWidth: 2,
-          hoveredColor: '#1890ff',
+          hoveredColor: '#3b82f6',
           descriptionSize: 12,
           flyLineEffect: 'arrow'
         }}
         typeConfig={{
           topic_cluster: {
             radius: 30,
-            fill: '#1890ff',
+            fill: '#3b82f6',
             nameSize: 14,
             typeSize: 10,
             nameColor: '#ffffff',
             typeColor: '#ffffff',
-            hoverStyle: { fill: '#096dd9' }
+            hoverStyle: { fill: '#2563eb' }
           },
           pillar_page: {
             radius: 25,
-            fill: '#52c41a',
+            fill: '#10b981',
             nameSize: 12,
             typeSize: 9,
             nameColor: '#ffffff',
             typeColor: '#ffffff',
-            hoverStyle: { fill: '#389e0d' }
+            hoverStyle: { fill: '#059669' }
           },
           cluster_content: {
             radius: 20,
-            fill: '#fa8c16',
+            fill: '#f59e0b',
             nameSize: 11,
             typeSize: 8,
             nameColor: '#ffffff',
             typeColor: '#ffffff',
-            hoverStyle: { fill: '#d46b08' }
+            hoverStyle: { fill: '#d97706' }
           },
           keyword: {
             radius: 18,
-            fill: '#722ed1',
+            fill: '#8b5cf6',
             nameSize: 10,
             typeSize: 8,
             nameColor: '#ffffff',
             typeColor: '#ffffff',
-            hoverStyle: { fill: '#531dab' }
+            hoverStyle: { fill: '#7c3aed' }
           },
           intent: {
             radius: 16,
-            fill: '#eb2f96',
+            fill: '#ec4899',
             nameSize: 10,
             typeSize: 8,
             nameColor: '#ffffff',
             typeColor: '#ffffff',
-            hoverStyle: { fill: '#c41d7f' }
+            hoverStyle: { fill: '#db2777' }
           },
           competitor: {
             radius: 22,
-            fill: '#f5222d',
+            fill: '#ef4444',
             nameSize: 11,
             typeSize: 8,
             nameColor: '#ffffff',
             typeColor: '#ffffff',
-            hoverStyle: { fill: '#cf1322' }
+            hoverStyle: { fill: '#dc2626' }
           },
           content_gap: {
             radius: 19,
-            fill: '#faad14',
+            fill: '#eab308',
             nameSize: 10,
             typeSize: 8,
             nameColor: '#ffffff',
             typeColor: '#ffffff',
-            hoverStyle: { fill: '#d48806' }
+            hoverStyle: { fill: '#ca8a04' }
           }
         }}
       />
 
-      <Modal
-        title={
-          <span>
-            {getNodeIcon(selectedEntity?.type || '')} {selectedEntity?.name}
-          </span>
-        }
-        open={modalVisible}
-        onCancel={() => setModalVisible(false)}
-        footer={[
-          <Button key="close" onClick={() => setModalVisible(false)}>
-            Close
-          </Button>,
-          <Button 
-            key="strategy" 
-            type="primary" 
-            onClick={() => handleNodeAddon(selectedEntity)}
-          >
-            Add to Strategy
-          </Button>
-        ]}
-        width={600}
-      >
-        {selectedEntity && (
-          <Descriptions column={2} bordered size="small">
-            <Descriptions.Item label="Type">
-              <Tag color={getIntentColor(selectedEntity.intent)}>
-                {selectedEntity.type.replace('_', ' ').toUpperCase()}
-              </Tag>
-            </Descriptions.Item>
-            <Descriptions.Item label="Search Intent">
-              <Tag color={getIntentColor(selectedEntity.intent)}>
-                {selectedEntity.intent || 'Mixed'}
-              </Tag>
-            </Descriptions.Item>
-            <Descriptions.Item label="Search Volume">
-              {selectedEntity.searchVolume?.toLocaleString() || 'N/A'} monthly searches
-            </Descriptions.Item>
-            <Descriptions.Item label="Keyword Difficulty">
-              <span style={{ color: getDifficultyColor(selectedEntity.difficulty) }}>
-                {selectedEntity.difficulty || 'N/A'}/100
-              </span>
-            </Descriptions.Item>
-            {selectedEntity.url && (
-              <Descriptions.Item label="URL" span={2}>
-                <a href={selectedEntity.url} target="_blank" rel="noopener noreferrer">
-                  {selectedEntity.url}
-                </a>
-              </Descriptions.Item>
-            )}
-            {selectedEntity.metadata?.cpc && (
-              <Descriptions.Item label="CPC">
-                ${selectedEntity.metadata.cpc}
-              </Descriptions.Item>
-            )}
-            {selectedEntity.metadata?.ranking_position && (
-              <Descriptions.Item label="Current Ranking">
-                Position {selectedEntity.metadata.ranking_position}
-              </Descriptions.Item>
-            )}
-            {selectedEntity.metadata?.traffic_potential && (
-              <Descriptions.Item label="Traffic Potential" span={2}>
-                {selectedEntity.metadata.traffic_potential.toLocaleString()} monthly visits
-              </Descriptions.Item>
-            )}
-            {selectedEntity.metadata?.shared_keywords && (
-              <Descriptions.Item label="Shared Keywords" span={2}>
-                {selectedEntity.metadata.shared_keywords} keywords in common
-              </Descriptions.Item>
-            )}
-          </Descriptions>
-        )}
-      </Modal>
+      <Dialog open={modalVisible} onOpenChange={setModalVisible}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <span className="text-2xl">{getNodeIcon(selectedEntity?.type || '')}</span>
+              {selectedEntity?.name}
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedEntity && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Type</label>
+                  <div className="mt-1">
+                    <Badge className={getIntentColor(selectedEntity.intent)}>
+                      {selectedEntity.type.replace('_', ' ').toUpperCase()}
+                    </Badge>
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Search Intent</label>
+                  <div className="mt-1">
+                    <Badge className={getIntentColor(selectedEntity.intent)}>
+                      {selectedEntity.intent || 'Mixed'}
+                    </Badge>
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Search Volume</label>
+                  <p className="text-lg font-semibold">
+                    {selectedEntity.searchVolume?.toLocaleString() || 'N/A'} 
+                    <span className="text-sm font-normal text-muted-foreground ml-1">monthly</span>
+                  </p>
+                </div>
+                
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Keyword Difficulty</label>
+                  <p className={`text-lg font-semibold ${getDifficultyColor(selectedEntity.difficulty)}`}>
+                    {selectedEntity.difficulty || 'N/A'}/100
+                  </p>
+                </div>
+              </div>
+
+              {selectedEntity.url && (
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">URL</label>
+                  <div className="mt-1">
+                    <a 
+                      href={selectedEntity.url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                    >
+                      {selectedEntity.url}
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </div>
+                </div>
+              )}
+
+              {selectedEntity.metadata && (
+                <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+                  {selectedEntity.metadata.cpc && (
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">CPC</label>
+                      <p className="text-lg font-semibold">${selectedEntity.metadata.cpc}</p>
+                    </div>
+                  )}
+                  
+                  {selectedEntity.metadata.ranking_position && (
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Current Ranking</label>
+                      <p className="text-lg font-semibold">Position {selectedEntity.metadata.ranking_position}</p>
+                    </div>
+                  )}
+                  
+                  {selectedEntity.metadata.traffic_potential && (
+                    <div className="col-span-2">
+                      <label className="text-sm font-medium text-muted-foreground">Traffic Potential</label>
+                      <p className="text-lg font-semibold">
+                        {selectedEntity.metadata.traffic_potential.toLocaleString()} 
+                        <span className="text-sm font-normal text-muted-foreground ml-1">monthly visits</span>
+                      </p>
+                    </div>
+                  )}
+                  
+                  {selectedEntity.metadata.shared_keywords && (
+                    <div className="col-span-2">
+                      <label className="text-sm font-medium text-muted-foreground">Shared Keywords</label>
+                      <p className="text-lg font-semibold">
+                        {selectedEntity.metadata.shared_keywords} keywords in common
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setModalVisible(false)}>
+              Close
+            </Button>
+            <Button onClick={() => handleNodeAddon(selectedEntity)}>
+              Add to Strategy
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
