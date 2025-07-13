@@ -24,6 +24,7 @@
     "README.md"
   ],
   "dependencies": {
+    "@duckdb/duckdb-wasm": "^1.29.1-dev132.0",
     "@reduxjs/toolkit": "^2.0.0",
     "framer-motion": "12.23.0",
     "lodash.uniqby": "^4.7.0",
